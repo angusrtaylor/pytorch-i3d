@@ -136,7 +136,7 @@ class I3DDataSet(data.Dataset):
 
 if __name__ == '__main__':
     train_dataset = I3DDataSet(
-        "/data/home/iliauk/repos/pytorch-i3d/data/train_rgb.list",
+        "/home/anta/pytorch-i3d/data/train_rgb.list",
         sample_frames = 64,
         modality='RGB',
         image_tmpl="frame{:04d}.jpg"

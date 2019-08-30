@@ -34,8 +34,8 @@ _C.CUDNN.ENABLED = True
 # Dataset
 _C.DATASET = CN()
 _C.DATASET.NAME = 'hmdb51'
-_C.DATASET.TRAIN = "/data/home/iliauk/repos/pytorch-i3d/data/train_rgb.list"
-_C.DATASET.TEST = "/data/home/iliauk/repos/pytorch-i3d/data/test_rgb.list"
+_C.DATASET.TRAIN = "/home/anta/pytorch-i3d/data/train_rgb.list"
+_C.DATASET.TEST = "/home/anta/pytorch-i3d/data/test_rgb.list"
 _C.DATASET.NUM_CLASSES = 51
 _C.DATASET.FILENAMES = "frame{:04d}.jpg"
 

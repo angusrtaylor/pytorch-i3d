@@ -3,7 +3,7 @@ import cv2
 import os
 from pathlib import Path
 
-videos = [f.resolve() for f in Path('/largedata/i3d/videos').glob('**/*.avi')]
+videos = [f.resolve() for f in Path('/datadir/videos').glob('**/*.avi')]
 print(videos[:10])
 
 new_dirs = []
