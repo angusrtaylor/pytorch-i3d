@@ -15,14 +15,13 @@ class VideoRecord(object):
 
     @property
     def path(self):
-        return os.path.join(self._data[0],'i')
+        return self._data[0]
 
     @property
     def num_frames(self):
-        # FLAG fix this better
         return int(
             len([x for x in Path(
-                os.path.join(self._data[0],'i')).glob('*.jpg')])-1)
+                self._data[0]).glob('img_*')])-1)
 
     @property
     def label(self):
@@ -37,7 +36,6 @@ class I3DDataSet(data.Dataset):
         self.list_file = list_file
         self.sample_frames = sample_frames
         self.modality = modality
-        self.image_tmpl = image_tmpl
         self.transform = transform
         self.train_mode = train_mode
         if not self.train_mode:
@@ -47,12 +45,33 @@ class I3DDataSet(data.Dataset):
 
     def _load_image(self, directory, idx):
         if self.modality == 'RGB':
-            img_path = os.path.join(directory, self.image_tmpl.format(idx))
+            img_path = os.path.join(directory, 'img_{:05}.jpg'.format(idx))
             try:
-                return [Image.open(img_path).convert('RGB')]
+                img = Image.open(img_path).convert('RGB')
             except:
                 print("Couldn't load image:{}".format(img_path))
                 return None
+            img = np.array(img, dtype=np.float32)
+            img = Image.fromarray(img.astype('uint8'))
+            return [img]
+        else:
+            try:
+                img_path = os.path.join(directory, 'flow_x_{:05}.jpg'.format(idx))
+                x_img = Image.open(img_path).convert('L')
+            except:
+                print("Couldn't load image:{}".format(img_path))
+                return None
+            try:
+                img_path = os.path.join(directory, 'flow_y_{:05}.jpg'.format(idx))
+                y_img = Image.open(img_path).convert('L')
+            except:
+                print("Couldn't load image:{}".format(img_path))
+                return None
+            x_img = np.array(y_img, dtype=np.float32)
+            y_img = np.array(y_img, dtype=np.float32)
+            img = np.asarray([x_img, y_img]).transpose([1, 2, 0])
+            img = Image.fromarray(img.astype('uint8'))
+            return [img]
 
     def _parse_list(self):
         self.video_list = [
@@ -104,6 +123,7 @@ class I3DDataSet(data.Dataset):
         record = self.video_list[index]
 
         if self.train_mode:
+            #print(record.path, ' ', record.num_frames)
             segment_indices = self._sample_indices(record)
             process_data, label = self.get(record, segment_indices)
             while process_data is None:
@@ -136,11 +156,13 @@ class I3DDataSet(data.Dataset):
 
 if __name__ == '__main__':
     train_dataset = I3DDataSet(
-        "/home/anta/pytorch-i3d/data/train_rgb.list",
+        "/home/anta/pytorch-i3d/data/test_rgb.list",
         sample_frames = 64,
-        modality='RGB',
-        image_tmpl="frame{:04d}.jpg"
+        modality='flow'
     )
+    print(train_dataset.__getitem__(10)[0][0].size)
+    print(train_dataset.__getitem__(10)[0][0].mode)
 
-    for x in train_dataset:
-        print(x[0][0])
+    #for x in train_dataset:
+    #    pass
+        #print(x[1])

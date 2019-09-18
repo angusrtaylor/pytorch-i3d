@@ -124,8 +124,12 @@ class GroupRandomResizeCrop(object):
 class Stack(object):
 
     def __call__(self, img_group):
+        # if img_group[0].mode == 'L':
+        #     stacked_group = np.concatenate([np.expand_dims(x, 2) for x in img_group], axis=2)
+        # else:
+        #     stacked_group = np.concatenate([np.expand_dims(x, 3) for x in img_group], axis=3)
+        #print(stacked_group[0].shape)
         stacked_group = np.concatenate([np.expand_dims(x, 3) for x in img_group], axis=3)
-
         return stacked_group
 
 
@@ -135,6 +139,7 @@ class ToTorchFormatTensor(object):
 
     def __call__(self, pic):
         # handle numpy array
+        #print(torch.from_numpy(pic).shape)
         img = torch.from_numpy(pic).permute(2, 3, 0, 1).contiguous()
 
         return img.float().div(255)

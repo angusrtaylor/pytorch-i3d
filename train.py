@@ -29,6 +29,10 @@ from tensorboardX import SummaryWriter
 from default import _C as config
 from default import update_config
 
+# to work with vscode debugger https://github.com/joblib/joblib/issues/864
+import multiprocessing
+multiprocessing.set_start_method('spawn', True)
+
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -210,8 +214,8 @@ def run(*options, cfg=None):
         [
             GroupRandomResizeCrop(
                 [resize_range_min, resize_range_max], input_size),
-            GroupRandomHorizontalFlip(is_flow=False),
-            GroupColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05)
+            #GroupRandomHorizontalFlip(is_flow=False),
+            #GroupColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05)
         ]
     )
 
@@ -275,7 +279,9 @@ def run(*options, cfg=None):
         # Load pretrained imagenet+kinetics weights
         i3d_model.load_state_dict(torch.load('pretrained_chkpt/rgb_imagenet.pt'))
     else:
-        raise Exception("Flow not yet implemented")
+        i3d_model = InceptionI3d(400, in_channels=2)
+        i3d_model.load_state_dict(torch.load('pretrained_chkpt/flow_imagenet.pt'))
+
     # Replace final FC layer to match dataset
     i3d_model.replace_logits(config.DATASET.NUM_CLASSES)
 
