@@ -51,8 +51,7 @@ class I3DDataSet(data.Dataset):
             except:
                 print("Couldn't load image:{}".format(img_path))
                 return None
-            img = np.array(img, dtype=np.float32)
-            img = Image.fromarray(img.astype('uint8'))
+            img = img.astype('uint8')
             return [img]
         else:
             try:
@@ -160,8 +159,9 @@ if __name__ == '__main__':
         sample_frames = 64,
         modality='flow'
     )
-    print(train_dataset.__getitem__(10)[0][0].size)
-    print(train_dataset.__getitem__(10)[0][0].mode)
+    img = train_dataset.__getitem__(10)[0][32]
+    print(img.mode)
+    
 
     #for x in train_dataset:
     #    pass

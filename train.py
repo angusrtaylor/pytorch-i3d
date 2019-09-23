@@ -30,8 +30,8 @@ from default import _C as config
 from default import update_config
 
 # to work with vscode debugger https://github.com/joblib/joblib/issues/864
-import multiprocessing
-multiprocessing.set_start_method('spawn', True)
+#import multiprocessing
+#multiprocessing.set_start_method('spawn', True)
 
 
 class AverageMeter(object):
@@ -210,11 +210,14 @@ def run(*options, cfg=None):
     resize_range_min = config.TRAIN.RESIZE_RANGE_MIN
     resize_range_max = config.TRAIN.RESIZE_RANGE_MAX
 
+    #is_flow = True if config.TRAIN.MODALITY == "flow" else False
+    is_flow = False
+
     train_augmentation = transforms.Compose(
         [
             GroupRandomResizeCrop(
                 [resize_range_min, resize_range_max], input_size),
-            #GroupRandomHorizontalFlip(is_flow=False),
+            GroupRandomHorizontalFlip(is_flow=is_flow),
             #GroupColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05)
         ]
     )
@@ -226,10 +229,10 @@ def run(*options, cfg=None):
         ]
     )
 
-    normalize = GroupNormalize(
-        config.TRAIN.INPUT_MEAN,
-        config.TRAIN.INPUT_STD
-    )
+    # normalize = GroupNormalize(
+    #     config.TRAIN.INPUT_MEAN,
+    #     config.TRAIN.INPUT_STD
+    # )
 
     # Setup DataLoaders
     train_loader = torch.utils.data.DataLoader(
@@ -242,7 +245,7 @@ def run(*options, cfg=None):
                        train_augmentation,
                        Stack(),
                        ToTorchFormatTensor(),
-                       normalize,
+                       GroupNormalize(0, 0),
                    ])
         ),
         batch_size=config.TRAIN.BATCH_SIZE,
@@ -261,7 +264,7 @@ def run(*options, cfg=None):
                        val_augmentation,
                        Stack(),
                        ToTorchFormatTensor(),
-                       normalize,
+                       GroupNormalize(0, 0),
                    ])
         ),
         batch_size=config.TEST.BATCH_SIZE,
@@ -297,15 +300,16 @@ def run(*options, cfg=None):
     criterion = torch.nn.CrossEntropyLoss().cuda()
     # Flag fix this once model runs
     # Paper "SGD, momentum=0.9, 16GPUs, upto 5k steps, 10x reduction on val-loss"
-    #optimizer = optim.SGD(
+    # optimizer = optim.SGD(
     #    i3d_model.parameters(), 
-    #    lr=0.01, # FLAG not sure what starting LR should be
+    #    lr=0.0001, # FLAG not sure what starting LR should be
     #    momentum=0.9, 
     #    weight_decay=0.0000001
-    #)
-    optimizer = Ranger(i3d_model.parameters())
+    # )
+    #optimizer = Ranger(i3d_model.parameters())
+    optimizer = optim.Adam(i3d_model.parameters(), lr=0.0001)
 
-    #lr_sched = optim.lr_scheduler.MultiStepLR(optimizer, [300, 1000])
+    lr_sched = optim.lr_scheduler.MultiStepLR(optimizer, [6, 12, 18, 24], gamma=0.1)
 
     # Train/Val/Logging loop
     # Abstract away to ignite and tensorboad once sure model is training
@@ -317,6 +321,7 @@ def run(*options, cfg=None):
 
         # train for one epoch
         train(train_loader, i3d_model, criterion, optimizer, epoch, writer)
+        lr_sched.step()
 
         # evaluate on validation set
         if (epoch + 1) % config.EVAL_FREQ == 0 or epoch == config.TRAIN.MAX_EPOCHS - 1:

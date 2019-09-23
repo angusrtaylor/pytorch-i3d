@@ -6,6 +6,9 @@ import numbers
 import math
 import torch
 
+# for debug
+from dataset import I3DDataSet
+
 
 class GroupRandomCrop(object):
     def __init__(self, size):
@@ -74,12 +77,13 @@ class GroupNormalize(object):
         self.std = std
 
     def __call__(self, tensor):
-        rep_mean = self.mean * (tensor.size()[0]//len(self.mean))
-        rep_std = self.std * (tensor.size()[0]//len(self.std))
+        tensor = (tensor/255.)*2 - 1
+        # rep_mean = self.mean * (tensor.size()[0]//len(self.mean))
+        # rep_std = self.std * (tensor.size()[0]//len(self.std))
 
-        # TODO: make efficient
-        for t, m, s in zip(tensor, rep_mean, rep_std):
-            t.sub_(m).div_(s)
+        # # TODO: make efficient
+        # for t, m, s in zip(tensor, rep_mean, rep_std):
+        #     t.sub_(m).div_(s)
 
         return tensor
 
@@ -94,7 +98,7 @@ class GroupScale(object):
     """
 
     def __init__(self, size, interpolation=Image.BILINEAR):
-        self.worker = torchvision.transforms.Scale(size, interpolation)
+        self.worker = torchvision.transforms.Resize(size, interpolation)
 
     def __call__(self, img_group):
         return [self.worker(img) for img in img_group]
@@ -142,7 +146,8 @@ class ToTorchFormatTensor(object):
         #print(torch.from_numpy(pic).shape)
         img = torch.from_numpy(pic).permute(2, 3, 0, 1).contiguous()
 
-        return img.float().div(255)
+        #return img.float().div(255)
+        return img.float()
 
 
 class IdentityTransform(object):
@@ -152,18 +157,22 @@ class IdentityTransform(object):
 
 
 if __name__ == "__main__":
-    trans = torchvision.transforms.Compose([
-        GroupScale(256),
-        GroupRandomCrop(224),
-        Stack(),
-        ToTorchFormatTensor(),
-        GroupNormalize(
-            mean=[.485, .456, .406],
-            std=[.229, .224, .225]
-        )]
-    )
 
-    im = Image.open('../tensorflow-model-zoo.torch/lena_299.png')
+    dataset = I3DDataSet(
+            list_file="/home/anta/pytorch-i3d/data/train_rgb.list",
+            sample_frames=64,
+            modality="flow",
+            image_tmpl="config.DATASET.FILENAMES",
+            transform=torchvision.transforms.Compose([
+                       GroupRandomResizeCrop(
+                        [256, 320], 224),
+                        GroupRandomHorizontalFlip(is_flow=False),
+                       Stack(),
+                       ToTorchFormatTensor(),
+                       GroupNormalize(0, 0),
+                   ])
+        )
 
-    color_group = [im] * 3
-    rst = trans(color_group)
+    im = dataset.__getitem__(100)[0]
+    print(im)
+
