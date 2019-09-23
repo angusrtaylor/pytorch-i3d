@@ -51,7 +51,6 @@ class I3DDataSet(data.Dataset):
             except:
                 print("Couldn't load image:{}".format(img_path))
                 return None
-            img = img.astype('uint8')
             return [img]
         else:
             try:
