@@ -30,8 +30,8 @@ from default import _C as config
 from default import update_config
 
 # to work with vscode debugger https://github.com/joblib/joblib/issues/864
-#import multiprocessing
-#multiprocessing.set_start_method('spawn', True)
+import multiprocessing
+multiprocessing.set_start_method('spawn', True)
 
 
 class AverageMeter(object):
@@ -80,7 +80,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer=None):
     model.train()
 
     end = time.time()
-    for i, (input, target) in enumerate(train_loader):
+    for step, (input, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -111,14 +111,14 @@ def train(train_loader, model, criterion, optimizer, epoch, writer=None):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % config.PRINT_FREQ == 0:
+        if step % config.PRINT_FREQ == 0:
             print(('Epoch: [{0}][{1}/{2}], lr: {lr:.5f}\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                   'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
-                   epoch, i, len(train_loader), batch_time=batch_time,
+                   epoch, step, len(train_loader), batch_time=batch_time,
                    data_time=data_time, loss=losses, top1=top1, top5=top5, lr=optimizer.param_groups[-1]['lr'])))
         
         if writer:
@@ -137,7 +137,7 @@ def validate(val_loader, model, criterion, epoch, writer=None):
 
     with torch.no_grad():
         end = time.time()
-        for i, (input, target) in enumerate(val_loader):
+        for step, (input, target) in enumerate(val_loader):
             input = input.cuda(non_blocking=True)
             target = target.cuda(non_blocking=True)
 
@@ -157,13 +157,13 @@ def validate(val_loader, model, criterion, epoch, writer=None):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if i % config.PRINT_FREQ == 0:
+            if step % config.PRINT_FREQ == 0:
                 print(('Test: [{0}/{1}]\t'
                     'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                     'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                     'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
                     'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
-                    i, len(val_loader), batch_time=batch_time, loss=losses,
+                    step, len(val_loader), batch_time=batch_time, loss=losses,
                     top1=top1, top5=top5)))
 
         print(('Testing Results: Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Loss {loss.avg:.5f}'
@@ -174,7 +174,8 @@ def validate(val_loader, model, criterion, epoch, writer=None):
             writer.add_scalar('val/top1', top1.avg, epoch+1)
             writer.add_scalar('val/top5', top5.avg, epoch+1)
 
-    return top1.avg
+    #return top1.avg
+    return losses.avg
 
 
 def run(*options, cfg=None):
@@ -309,23 +310,36 @@ def run(*options, cfg=None):
     #optimizer = Ranger(i3d_model.parameters())
     # optimizer = optim.Adam(i3d_model.parameters(), lr=0.0001)
 
-    lr_sched = optim.lr_scheduler.MultiStepLR(optimizer, [20, 50], gamma=0.1)
+    #scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [20, 50], gamma=0.1)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        factor=0.1,
+        patience=2,
+        verbose=True,
+        threshold=1e-4,
+        min_lr=1e-4
+    )
 
+    if not os.path.exists(config.MODEL_DIR):
+        os.makedirs(config.MODEL_DIR)
     # Train/Val/Logging loop
     # Abstract away to ignite and tensorboad once sure model is training
     for epoch in range(config.TRAIN.MAX_EPOCHS):
 
-        #if epoch == 0:
-        #    print("Validating untrained model")
-        #    validate(val_loader, i3d_model, criterion, (epoch + 1) * len(train_loader))
-
         # train for one epoch
-        train(train_loader, i3d_model, criterion, optimizer, epoch, writer)
-        lr_sched.step()
+        train(train_loader,
+            i3d_model,
+            criterion,
+            optimizer,
+            epoch,
+            writer
+        )
 
         # evaluate on validation set
         if (epoch + 1) % config.EVAL_FREQ == 0 or epoch == config.TRAIN.MAX_EPOCHS - 1:
-            prec1 = validate(val_loader, i3d_model, criterion, epoch, writer)
+            val_loss = validate(val_loader, i3d_model, criterion, epoch, writer)
+            scheduler.step(val_loss)
+            torch.save(i3d_model.module.state_dict(), config.MODEL_DIR+'/epoch'+str(epoch).zfill(3)+'.pt')
 
     writer.close()
 

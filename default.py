@@ -16,9 +16,10 @@ _C = CN()
 
 _C.OUTPUT_DIR = ""
 _C.LOG_DIR = "log"
+_C.MODEL_DIR = "checkpoints"
 _C.GPUS = (0,1,2,3)
 _C.WORKERS = 16
-_C.PRINT_FREQ = 20
+_C.PRINT_FREQ = 50
 _C.EVAL_FREQ = 5
 _C.AUTO_RESUME = False
 _C.PIN_MEMORY = True
