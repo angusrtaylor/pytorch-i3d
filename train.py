@@ -300,16 +300,16 @@ def run(*options, cfg=None):
     criterion = torch.nn.CrossEntropyLoss().cuda()
     # Flag fix this once model runs
     # Paper "SGD, momentum=0.9, 16GPUs, upto 5k steps, 10x reduction on val-loss"
-    # optimizer = optim.SGD(
-    #    i3d_model.parameters(), 
-    #    lr=0.0001, # FLAG not sure what starting LR should be
-    #    momentum=0.9, 
-    #    weight_decay=0.0000001
-    # )
+    optimizer = optim.SGD(
+       i3d_model.parameters(), 
+       lr=0.1, # FLAG not sure what starting LR should be
+       momentum=0.9, 
+       weight_decay=0.0000001
+    )
     #optimizer = Ranger(i3d_model.parameters())
-    optimizer = optim.Adam(i3d_model.parameters(), lr=0.0001)
+    # optimizer = optim.Adam(i3d_model.parameters(), lr=0.0001)
 
-    lr_sched = optim.lr_scheduler.MultiStepLR(optimizer, [6, 12, 18, 24], gamma=0.1)
+    lr_sched = optim.lr_scheduler.MultiStepLR(optimizer, [20, 50], gamma=0.1)
 
     # Train/Val/Logging loop
     # Abstract away to ignite and tensorboad once sure model is training

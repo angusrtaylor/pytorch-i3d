@@ -156,12 +156,12 @@ if __name__ == '__main__':
     train_dataset = I3DDataSet(
         "/home/anta/pytorch-i3d/data/test_rgb.list",
         sample_frames = 64,
-        modality='flow'
+        modality='RGB'
     )
     img = train_dataset.__getitem__(10)[0][32]
     print(img.mode)
     
 
-    #for x in train_dataset:
-    #    pass
+    for x in train_dataset:
+        pass
         #print(x[1])
