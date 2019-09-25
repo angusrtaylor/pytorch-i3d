@@ -30,8 +30,8 @@ from default import _C as config
 from default import update_config
 
 # to work with vscode debugger https://github.com/joblib/joblib/issues/864
-import multiprocessing
-multiprocessing.set_start_method('spawn', True)
+# import multiprocessing
+# multiprocessing.set_start_method('spawn', True)
 
 
 class AverageMeter(object):
@@ -238,7 +238,8 @@ def run(*options, cfg=None):
     # Setup DataLoaders
     train_loader = torch.utils.data.DataLoader(
         I3DDataSet(
-            list_file=config.DATASET.TRAIN,
+            data_root='/datadir/rawframes/',
+            split=config.DATASET.SPLIT,
             sample_frames=config.TRAIN.SAMPLE_FRAMES,
             modality=config.TRAIN.MODALITY,
             image_tmpl=config.DATASET.FILENAMES,
@@ -257,7 +258,8 @@ def run(*options, cfg=None):
 
     val_loader = torch.utils.data.DataLoader(
         I3DDataSet(
-            list_file=config.DATASET.TEST,
+            data_root='/datadir/rawframes/',
+            split=config.DATASET.SPLIT,
             sample_frames=config.TRAIN.SAMPLE_FRAMES,
             modality=config.TRAIN.MODALITY,
             image_tmpl=config.DATASET.FILENAMES,
@@ -266,7 +268,8 @@ def run(*options, cfg=None):
                        Stack(),
                        ToTorchFormatTensor(),
                        GroupNormalize(0, 0),
-                   ])
+                   ]),
+            train_mode=False,
         ),
         batch_size=config.TEST.BATCH_SIZE,
         shuffle=False,
@@ -339,7 +342,9 @@ def run(*options, cfg=None):
         if (epoch + 1) % config.EVAL_FREQ == 0 or epoch == config.TRAIN.MAX_EPOCHS - 1:
             val_loss = validate(val_loader, i3d_model, criterion, epoch, writer)
             scheduler.step(val_loss)
-            torch.save(i3d_model.module.state_dict(), config.MODEL_DIR+'/epoch'+str(epoch).zfill(3)+'.pt')
+            torch.save(
+                i3d_model.module.state_dict(),
+                config.MODEL_DIR+'/'+config.MODEL.NAME+'_split'+str(config.DATASET.SPLIT)+'_epoch'+str(epoch).zfill(3)+'.pt')
 
     writer.close()
 

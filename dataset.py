@@ -29,11 +29,12 @@ class VideoRecord(object):
 
 
 class I3DDataSet(data.Dataset):
-    def __init__(self, list_file, sample_frames=64, modality='RGB',
+    def __init__(self, data_root, split=1, sample_frames=64, modality='RGB',
                  image_tmpl='frame{:04d}.jpg', transform=lambda x:x,
                  train_mode=True, test_clips=10):
 
-        self.list_file = list_file
+        self.data_root = data_root
+        self.split = split
         self.sample_frames = sample_frames
         self.modality = modality
         self.transform = transform
@@ -41,7 +42,7 @@ class I3DDataSet(data.Dataset):
         if not self.train_mode:
             self.num_clips = test_clips
 
-        self._parse_list()
+        self._parse_split_files()
 
     def _load_image(self, directory, idx):
         if self.modality == 'RGB':
@@ -71,9 +72,21 @@ class I3DDataSet(data.Dataset):
             img = Image.fromarray(img.astype('uint8'))
             return [img]
 
-    def _parse_list(self):
-        self.video_list = [
-            VideoRecord(x.strip().split(' ')) for x in open(self.list_file)]
+    def _parse_split_files(self):
+            file_list = sorted(Path('./data/hmdb51_splits').glob('*'+str(self.split)+'.txt'))
+            video_list = []
+            for class_idx, f in enumerate(file_list):
+                class_name = str(f).strip().split('/')[2][:-16]
+                for line in open(f):
+                    tokens = line.strip().split(' ')
+                    video_path = self.data_root+class_name+'/'+tokens[0][:-4]
+                    record = (video_path, class_idx)
+                    if self.train_mode & (tokens[-1] == '1'):
+                        video_list.append(VideoRecord(record))
+                    elif (self.train_mode == False) & (tokens[-1] == '2'):
+                        video_list.append(VideoRecord(record))
+            self.video_list = video_list
+
 
     def _sample_indices(self, record):
         """
@@ -154,14 +167,14 @@ class I3DDataSet(data.Dataset):
 
 if __name__ == '__main__':
     train_dataset = I3DDataSet(
-        "/home/anta/pytorch-i3d/data/test_rgb.list",
+        data_root='/datadir/rawframes/',
+        split=1,
         sample_frames = 64,
-        modality='RGB'
+        modality='flow',
+        train_mode=False
     )
     img = train_dataset.__getitem__(10)[0][32]
-    print(img.mode)
-    
+    print(img.size)
 
-    for x in train_dataset:
-        pass
-        #print(x[1])
+    for i, img in enumerate(train_dataset):
+        print(i, img[0][0].size)

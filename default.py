@@ -35,6 +35,7 @@ _C.CUDNN.ENABLED = True
 # Dataset
 _C.DATASET = CN()
 _C.DATASET.NAME = 'hmdb51'
+_C.DATASET.SPLIT = 1
 _C.DATASET.TRAIN = "/home/anta/pytorch-i3d/data/train_rgb.list"
 _C.DATASET.TEST = "/home/anta/pytorch-i3d/data/test_rgb.list"
 _C.DATASET.NUM_CLASSES = 51
@@ -56,11 +57,11 @@ _C.TRAIN.INPUT_STD = [0.229, 0.224, 0.225]
 _C.TRAIN.SAMPLE_FRAMES = 64
 _C.TRAIN.MODALITY = "flow"
 _C.TRAIN.BATCH_SIZE = 24
-_C.TRAIN.MAX_EPOCHS = 100
+_C.TRAIN.MAX_EPOCHS = 50
 
 # Test
 _C.TEST = CN()
-_C.TEST.BATCH_SIZE = 32
+_C.TEST.BATCH_SIZE = 12
 
 def update_config(cfg, options=None, config_file=None):
     cfg.defrost()
