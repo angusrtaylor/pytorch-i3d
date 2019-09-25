@@ -129,24 +129,35 @@ class I3DDataSet(data.Dataset):
 
         return checked_offsets
 
-
     def __getitem__(self, index):
         record = self.video_list[index]
 
-        if self.train_mode:
-            #print(record.path, ' ', record.num_frames)
-            segment_indices = self._sample_indices(record)
-            process_data, label = self.get(record, segment_indices)
-            while process_data is None:
-                index = randint(0, len(self.video_list) - 1)
-                process_data, label = self.__getitem__(index)
-        else:
-            segment_indices = self._get_test_indices(record)
-            process_data,label = self.get(record, segment_indices)
-            if process_data is None:
-                raise ValueError('sample indices:', record.path, segment_indices)
+        #print(record.path, ' ', record.num_frames)
+        segment_indices = self._sample_indices(record)
+        process_data, label = self.get(record, segment_indices)
+        while process_data is None:
+            index = randint(0, len(self.video_list) - 1)
+            process_data, label = self.__getitem__(index)
 
         return process_data, label
+
+    # def __getitem__(self, index):
+    #     record = self.video_list[index]
+
+    #     if self.train_mode:
+    #         #print(record.path, ' ', record.num_frames)
+    #         segment_indices = self._sample_indices(record)
+    #         process_data, label = self.get(record, segment_indices)
+    #         while process_data is None:
+    #             index = randint(0, len(self.video_list) - 1)
+    #             process_data, label = self.__getitem__(index)
+    #     else:
+    #         segment_indices = self._get_test_indices(record)
+    #         process_data,label = self.get(record, segment_indices)
+    #         if process_data is None:
+    #             raise ValueError('sample indices:', record.path, segment_indices)
+
+    #     return process_data, label
 
 
     def get(self, record, indices):

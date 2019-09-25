@@ -238,7 +238,7 @@ def run(*options, cfg=None):
     # Setup DataLoaders
     train_loader = torch.utils.data.DataLoader(
         I3DDataSet(
-            data_root='/datadir/rawframes/',
+            data_root=config.DATASET.DIR,
             split=config.DATASET.SPLIT,
             sample_frames=config.TRAIN.SAMPLE_FRAMES,
             modality=config.TRAIN.MODALITY,
@@ -258,7 +258,7 @@ def run(*options, cfg=None):
 
     val_loader = torch.utils.data.DataLoader(
         I3DDataSet(
-            data_root='/datadir/rawframes/',
+            data_root=config.DATASET.DIR,
             split=config.DATASET.SPLIT,
             sample_frames=config.TRAIN.SAMPLE_FRAMES,
             modality=config.TRAIN.MODALITY,
