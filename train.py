@@ -339,7 +339,8 @@ def run(*options, cfg=None):
         if (epoch + 1) % config.EVAL_FREQ == 0 or epoch == config.TRAIN.MAX_EPOCHS - 1:
             val_loss = validate(val_loader, i3d_model, criterion, epoch, writer)
             scheduler.step(val_loss)
-            torch.save(i3d_model.module.state_dict(), config.MODEL_DIR+'/epoch'+str(epoch).zfill(3)+'.pt')
+            torch.save(i3d_model.module.state_dict(),
+                config.MODEL_DIR+'/'+config.MODEL.NAME+'_epoch'+str(epoch).zfill(3)+'.pt')
 
     writer.close()
 
