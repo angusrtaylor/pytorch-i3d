@@ -29,8 +29,6 @@ from tensorboardX import SummaryWriter
 from default import _C as config
 from default import update_config
 
-from cycle import cyclical_lr
-
 # to work with vscode debugger https://github.com/joblib/joblib/issues/864
 # import multiprocessing
 # multiprocessing.set_start_method('spawn', True)
@@ -324,9 +322,10 @@ def run(*options, cfg=None):
     #     threshold=1e-4,
     #     min_lr=1e-4
     # )
-    step_size = 25
-    clr = cyclical_lr(step_size, min_lr=0.0001, max_lr=0.1, mode='triangular')
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, [clr])
+    
+    #clr = cyclical_lr(step_size, min_lr=0.0001, max_lr=0.1, mode='triangular')
+    #scheduler = optim.lr_scheduler.LambdaLR(optimizer, [clr])
+    scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.1, mode='triangular2', step_size_up=25)
 
     if not os.path.exists(config.MODEL_DIR):
         os.makedirs(config.MODEL_DIR)
