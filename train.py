@@ -29,6 +29,8 @@ from tensorboardX import SummaryWriter
 from default import _C as config
 from default import update_config
 
+from cycle import cyclical_lr
+
 # to work with vscode debugger https://github.com/joblib/joblib/issues/864
 # import multiprocessing
 # multiprocessing.set_start_method('spawn', True)
@@ -306,7 +308,7 @@ def run(*options, cfg=None):
     # Paper "SGD, momentum=0.9, 16GPUs, upto 5k steps, 10x reduction on val-loss"
     optimizer = optim.SGD(
        i3d_model.parameters(), 
-       lr=0.1, # FLAG not sure what starting LR should be
+       lr=1.0,
        momentum=0.9, 
        weight_decay=0.0000001
     )
@@ -314,14 +316,17 @@ def run(*options, cfg=None):
     # optimizer = optim.Adam(i3d_model.parameters(), lr=0.0001)
 
     #scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [20, 50], gamma=0.1)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        factor=0.1,
-        patience=2,
-        verbose=True,
-        threshold=1e-4,
-        min_lr=1e-4
-    )
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    #     optimizer,
+    #     factor=0.1,
+    #     patience=2,
+    #     verbose=True,
+    #     threshold=1e-4,
+    #     min_lr=1e-4
+    # )
+    step_size = 25
+    clr = cyclical_lr(step_size, min_lr=0.0001, max_lr=0.1, mode='triangular')
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, [clr])
 
     if not os.path.exists(config.MODEL_DIR):
         os.makedirs(config.MODEL_DIR)
