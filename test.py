@@ -83,7 +83,7 @@ def test(test_loader, modality, state_dict_file):
     with torch.no_grad():
         end = time.time()
         for step, (input, target) in enumerate(test_loader):
-            print("step", step)
+            #print("step", step)
             target_list.append(target)
             input = input.cuda(non_blocking=True)
 
@@ -120,10 +120,12 @@ def run(*options, cfg=None):
 
     rgb_loader = torch.utils.data.DataLoader(
         I3DDataSet(
-            list_file=config.DATASET.TEST,
+            data_root='/datadir/rawframes/',
+            split=config.DATASET.SPLIT,
             sample_frames=config.TRAIN.SAMPLE_FRAMES,
             modality="RGB",
             image_tmpl=config.DATASET.FILENAMES,
+            train_mode=False,
             transform=torchvision.transforms.Compose([
                        test_augmentation,
                        Stack(),
@@ -139,10 +141,12 @@ def run(*options, cfg=None):
 
     flow_loader = torch.utils.data.DataLoader(
         I3DDataSet(
-            list_file=config.DATASET.TEST,
+            data_root='/datadir/rawframes/',
+            split=config.DATASET.SPLIT,
             sample_frames=config.TRAIN.SAMPLE_FRAMES,
             modality="flow",
             image_tmpl=config.DATASET.FILENAMES,
+            train_mode=False,
             transform=torchvision.transforms.Compose([
                        test_augmentation,
                        Stack(),
@@ -177,12 +181,16 @@ def run(*options, cfg=None):
         flow_model_file
     )
 
+    targets = targets.cuda(non_blocking=True)
+    rgb_top1_accuracy = accuracy(rgb_predictions, targets, topk=(1, ))
+    flow_top1_accuracy = accuracy(flow_predictions, targets, topk=(1, ))
+
     predictions = torch.stack([rgb_predictions, flow_predictions])
     predictions_mean = torch.mean(predictions, dim=0)
-
-    targets = targets.cuda(non_blocking=True)
     top1accuracy = accuracy(predictions_mean, targets, topk=(1, ))
-    print("top1 accuracy: ", top1accuracy[0].cpu())
+    print("combined top1 accuracy: ", top1accuracy[0].cpu().numpy().tolist())
+    print("rgb top1 accuracy: ", rgb_top1_accuracy[0].cpu().numpy().tolist())
+    print("flow top1 accuracy: ", flow_top1_accuracy[0].cpu().numpy().tolist())
 
 
 

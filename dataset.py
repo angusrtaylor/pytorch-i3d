@@ -89,7 +89,7 @@ class I3DDataSet(data.Dataset):
                         video_list.append(VideoRecord(record))
                         class_count += 1
                 
-                print("class: ", class_name, " count: ", class_count, " label: ", class_idx)
+                #print("class: ", class_name, " count: ", class_count, " label: ", class_idx)
             self.video_list = video_list
 
 
@@ -115,54 +115,45 @@ class I3DDataSet(data.Dataset):
         offsets =[int(v)+1 for v in offsets]  # images are 1-indexed
         return offsets
 
+
     def _get_test_indices(self, record):
-        tick = (record.num_frames - self.sample_frames*2 + 1) / float(self.num_clips)
-        sample_start_pos = np.array(
-            [int(tick / 2.0 + tick * x) for x in range(self.num_clips)])
-        offsets = []
-        for p in sample_start_pos:
-            offsets.extend(range(p,p+self.sample_frames*2,2))
 
-        checked_offsets = []
-        for f in offsets:
-            new_f = int(f) + 1
-            if new_f < 1:
-                new_f = 1
-            elif new_f >= record.num_frames:
-                new_f = record.num_frames - 1
-            checked_offsets.append(new_f)
+        return [v+1 for v in range(0, record.num_frames, 2)]
 
-        return checked_offsets
-
-    def __getitem__(self, index):
-        record = self.video_list[index]
-
-        #print(record.path, ' ', record.num_frames)
-        segment_indices = self._sample_indices(record)
-        process_data, label = self.get(record, segment_indices)
-        while process_data is None:
-            index = randint(0, len(self.video_list) - 1)
-            process_data, label = self.__getitem__(index)
-
-        return process_data, label
 
     # def __getitem__(self, index):
     #     record = self.video_list[index]
 
-    #     if self.train_mode:
-    #         #print(record.path, ' ', record.num_frames)
-    #         segment_indices = self._sample_indices(record)
-    #         process_data, label = self.get(record, segment_indices)
-    #         while process_data is None:
-    #             index = randint(0, len(self.video_list) - 1)
-    #             process_data, label = self.__getitem__(index)
-    #     else:
-    #         segment_indices = self._get_test_indices(record)
-    #         process_data,label = self.get(record, segment_indices)
-    #         if process_data is None:
-    #             raise ValueError('sample indices:', record.path, segment_indices)
+
+    #     #print(record.path, ' ', record.num_frames)
+    #     segment_indices = self._sample_indices(record)
+    #     #print(segment_indices)
+    #     process_data, label = self.get(record, segment_indices)
+    #     while process_data is None:
+    #         index = randint(0, len(self.video_list) - 1)
+    #         process_data, label = self.__getitem__(index)
+
 
     #     return process_data, label
+
+    def __getitem__(self, index):
+        record = self.video_list[index]
+
+        if self.train_mode:
+            #print(record.path, ' ', record.num_frames)
+            segment_indices = self._sample_indices(record)
+            print(segment_indices)
+            process_data, label = self.get(record, segment_indices)
+            # while process_data is None:
+            #     index = randint(0, len(self.video_list) - 1)
+            #     process_data, label = self.__getitem__(index)
+        else:
+            segment_indices = self._get_test_indices(record)
+            process_data,label = self.get(record, segment_indices)
+            if process_data is None:
+                raise ValueError('sample indices:', record.path, segment_indices)
+        
+        return process_data, label
 
 
     def get(self, record, indices):
@@ -182,12 +173,17 @@ class I3DDataSet(data.Dataset):
 
 
 if __name__ == '__main__':
-    train_dataset = I3DDataSet(
+    dat = I3DDataSet(
         data_root='/datadir/rawframes/',
         split=1,
         sample_frames = 64,
         modality='RGB',
-        train_mode=True
+        train_mode=False
     )
-    img = train_dataset.__getitem__(10)[0][32]
-    print(img.size)
+    item = dat.__getitem__(10)
+    print(item[1])
+    print(len(item[0]))
+    print(item[0][0].size)
+
+    for x in dat:
+        pass
