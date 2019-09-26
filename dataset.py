@@ -77,14 +77,19 @@ class I3DDataSet(data.Dataset):
             video_list = []
             for class_idx, f in enumerate(file_list):
                 class_name = str(f).strip().split('/')[2][:-16]
+                class_count = 0
                 for line in open(f):
                     tokens = line.strip().split(' ')
                     video_path = self.data_root+class_name+'/'+tokens[0][:-4]
                     record = (video_path, class_idx)
                     if self.train_mode & (tokens[-1] == '1'):
                         video_list.append(VideoRecord(record))
+                        class_count += 1
                     elif (self.train_mode == False) & (tokens[-1] == '2'):
                         video_list.append(VideoRecord(record))
+                        class_count += 1
+                
+                print("class: ", class_name, " count: ", class_count, " label: ", class_idx)
             self.video_list = video_list
 
 
@@ -181,11 +186,8 @@ if __name__ == '__main__':
         data_root='/datadir/rawframes/',
         split=1,
         sample_frames = 64,
-        modality='flow',
-        train_mode=False
+        modality='RGB',
+        train_mode=True
     )
     img = train_dataset.__getitem__(10)[0][32]
     print(img.size)
-
-    for i, img in enumerate(train_dataset):
-        print(i, img[0][0].size)
