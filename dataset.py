@@ -8,6 +8,8 @@ import numpy as np
 from numpy.random import randint
 from pathlib import Path
 
+from itertools import cycle
+
 
 class VideoRecord(object):
     def __init__(self, row):
@@ -98,60 +100,47 @@ class I3DDataSet(data.Dataset):
         :param record: VideoRecord
         :return: list
         """
-        expanded_sample_length = self.sample_frames * 4  # in order to drop every other frame
-        if record.num_frames >= expanded_sample_length:
-            start_pos = randint(record.num_frames - expanded_sample_length + 1)
-            offsets = range(start_pos, start_pos + expanded_sample_length, 4)
-        elif record.num_frames > self.sample_frames*2:
+        # expanded_sample_length = self.sample_frames * 4  # in order to drop every other frame
+        # if record.num_frames >= expanded_sample_length:
+        #     start_pos = randint(record.num_frames - expanded_sample_length + 1)
+        #     offsets = range(start_pos, start_pos + expanded_sample_length, 4)
+        if record.num_frames > self.sample_frames*2:
             start_pos = randint(record.num_frames - self.sample_frames*2 + 1)
             offsets = range(start_pos, start_pos + self.sample_frames*2, 2)
         elif record.num_frames > self.sample_frames:
             start_pos = randint(record.num_frames - self.sample_frames + 1)
             offsets = range(start_pos, start_pos + self.sample_frames, 1)
         else:
-            offsets = np.sort(randint(record.num_frames, size=self.sample_frames))
-            # In paper they loop the image, investigate whether to add
-            #print("Num of of frames low: {}".format(len(offsets)))
-        offsets =[int(v)+1 for v in offsets]  # images are 1-indexed
+            offsets = [x for x in range(record.num_frames)]
+        offsets = [int(v)+1 for v in offsets]  # images are 1-indexed
+        if len(offsets) < self.sample_frames:
+            self._loop_indices(offsets)
         return offsets
 
 
     def _get_test_indices(self, record):
 
-        return [v+1 for v in range(0, record.num_frames, 2)]
+        offsets = [v+1 for v in range(0, record.num_frames, 2)]
+        if len(offsets) < self.sample_frames:
+            self._loop_indices(offsets)
+        return offsets
 
 
-    # def __getitem__(self, index):
-    #     record = self.video_list[index]
+    def _loop_indices(self, indices):
+        indices_cycle = cycle(indices)
+        while len(indices) < self.sample_frames:
+            indices.append(next(indices_cycle))
 
-
-    #     #print(record.path, ' ', record.num_frames)
-    #     segment_indices = self._sample_indices(record)
-    #     #print(segment_indices)
-    #     process_data, label = self.get(record, segment_indices)
-    #     while process_data is None:
-    #         index = randint(0, len(self.video_list) - 1)
-    #         process_data, label = self.__getitem__(index)
-
-
-    #     return process_data, label
 
     def __getitem__(self, index):
         record = self.video_list[index]
-
         if self.train_mode:
-            #print(record.path, ' ', record.num_frames)
             segment_indices = self._sample_indices(record)
-            print(segment_indices)
-            process_data, label = self.get(record, segment_indices)
-            # while process_data is None:
-            #     index = randint(0, len(self.video_list) - 1)
-            #     process_data, label = self.__getitem__(index)
         else:
             segment_indices = self._get_test_indices(record)
-            process_data,label = self.get(record, segment_indices)
-            if process_data is None:
-                raise ValueError('sample indices:', record.path, segment_indices)
+        process_data, label = self.get(record, segment_indices)
+        if process_data is None:
+            raise ValueError('sample indices:', record.path, segment_indices)
         
         return process_data, label
 
@@ -178,7 +167,7 @@ if __name__ == '__main__':
         split=1,
         sample_frames = 64,
         modality='RGB',
-        train_mode=False
+        train_mode=True
     )
     item = dat.__getitem__(10)
     print(item[1])
