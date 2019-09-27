@@ -118,80 +118,91 @@ def run(*options, cfg=None):
         ]
     )
 
-    rgb_loader = torch.utils.data.DataLoader(
-        I3DDataSet(
-            data_root='/datadir/rawframes/',
-            split=config.DATASET.SPLIT,
-            sample_frames=config.TRAIN.SAMPLE_FRAMES,
-            modality="RGB",
-            image_tmpl=config.DATASET.FILENAMES,
-            train_mode=False,
-            transform=torchvision.transforms.Compose([
-                       test_augmentation,
-                       Stack(),
-                       ToTorchFormatTensor(),
-                       GroupNormalize(0, 0),
-                   ])
-        ),
-        batch_size=config.TEST.BATCH_SIZE,
-        shuffle=False,
-        num_workers=config.WORKERS,
-        pin_memory=True
-    )
-
-    flow_loader = torch.utils.data.DataLoader(
-        I3DDataSet(
-            data_root='/datadir/rawframes/',
-            split=config.DATASET.SPLIT,
-            sample_frames=config.TRAIN.SAMPLE_FRAMES,
-            modality="flow",
-            image_tmpl=config.DATASET.FILENAMES,
-            train_mode=False,
-            transform=torchvision.transforms.Compose([
-                       test_augmentation,
-                       Stack(),
-                       ToTorchFormatTensor(),
-                       GroupNormalize(0, 0),
-                   ])
-        ),
-        batch_size=config.TEST.BATCH_SIZE,
-        shuffle=False,
-        num_workers=config.WORKERS,
-        pin_memory=True
-    )
-
-    rgb_model_file = 'checkpoints/i3d_rgb_epoch049.pt'
-    flow_model_file = 'checkpoints/i3d_flow_epoch049.pt'
-
     # Data-parallel
     devices_lst = list(range(torch.cuda.device_count()))
     print("Devices {}".format(devices_lst))
 
-    print("scoring with rgb model")
-    targets, rgb_predictions = test(
-        rgb_loader,
-        "RGB",
-        rgb_model_file
-    )
+    if (config.TEST.MODALITY == "RGB") or (config.TEST.MODALITY == "both"):
 
-    print("scoring with flow model")
-    _, flow_predictions = test(
-        flow_loader,
-        "flow",
-        flow_model_file
-    )
+        rgb_loader = torch.utils.data.DataLoader(
+            I3DDataSet(
+                data_root=config.DATASET.DIR,
+                split=config.DATASET.SPLIT,
+                sample_frames=config.TRAIN.SAMPLE_FRAMES,
+                modality="RGB",
+                image_tmpl=config.DATASET.FILENAMES,
+                train_mode=False,
+                transform=torchvision.transforms.Compose([
+                        test_augmentation,
+                        Stack(),
+                        ToTorchFormatTensor(),
+                        GroupNormalize(0, 0),
+                    ])
+            ),
+            batch_size=config.TEST.BATCH_SIZE,
+            shuffle=False,
+            num_workers=config.WORKERS,
+            pin_memory=True
+        )
 
-    targets = targets.cuda(non_blocking=True)
-    rgb_top1_accuracy = accuracy(rgb_predictions, targets, topk=(1, ))
-    flow_top1_accuracy = accuracy(flow_predictions, targets, topk=(1, ))
+        rgb_model_file = 'checkpoints/i3d_rgb_split1_epoch199.pt'
+        if not os.path.exists(rgb_model_file):
+            raise FileNotFoundError(rgb_model_file, " does not exist")
 
-    predictions = torch.stack([rgb_predictions, flow_predictions])
-    predictions_mean = torch.mean(predictions, dim=0)
-    top1accuracy = accuracy(predictions_mean, targets, topk=(1, ))
-    print("combined top1 accuracy: ", top1accuracy[0].cpu().numpy().tolist())
-    print("rgb top1 accuracy: ", rgb_top1_accuracy[0].cpu().numpy().tolist())
-    print("flow top1 accuracy: ", flow_top1_accuracy[0].cpu().numpy().tolist())
+        print("scoring with rgb model")
+        targets, rgb_predictions = test(
+            rgb_loader,
+            "RGB",
+            rgb_model_file
+        )
+        
+        targets = targets.cuda(non_blocking=True)
+        rgb_top1_accuracy = accuracy(rgb_predictions, targets, topk=(1, ))
+        print("rgb top1 accuracy: ", rgb_top1_accuracy[0].cpu().numpy().tolist())
+    
+    if (config.TEST.MODALITY == "flow") or (config.TEST.MODALITY == "both"):
 
+        flow_loader = torch.utils.data.DataLoader(
+            I3DDataSet(
+                data_root=config.DATASET.DIR,
+                split=config.DATASET.SPLIT,
+                sample_frames=config.TRAIN.SAMPLE_FRAMES,
+                modality="flow",
+                image_tmpl=config.DATASET.FILENAMES,
+                train_mode=False,
+                transform=torchvision.transforms.Compose([
+                        test_augmentation,
+                        Stack(),
+                        ToTorchFormatTensor(),
+                        GroupNormalize(0, 0),
+                    ])
+            ),
+            batch_size=config.TEST.BATCH_SIZE,
+            shuffle=False,
+            num_workers=config.WORKERS,
+            pin_memory=True
+        )
+
+        flow_model_file = 'checkpoints/i3d_flow_split1_epoch199.pt'
+        if not os.path.exists(flow_model_file):
+            raise FileNotFoundError(flow_model_file, " does not exist")
+
+        print("scoring with flow model")
+        targets, flow_predictions = test(
+            flow_loader,
+            "flow",
+            flow_model_file
+        )
+
+        targets = targets.cuda(non_blocking=True)
+        flow_top1_accuracy = accuracy(flow_predictions, targets, topk=(1, ))
+        print("flow top1 accuracy: ", flow_top1_accuracy[0].cpu().numpy().tolist())
+
+    if config.TEST.MODALITY == "both":
+        predictions = torch.stack([rgb_predictions, flow_predictions])
+        predictions_mean = torch.mean(predictions, dim=0)
+        top1accuracy = accuracy(predictions_mean, targets, topk=(1, ))
+        print("combined top1 accuracy: ", top1accuracy[0].cpu().numpy().tolist())
 
 
 if __name__ == "__main__":

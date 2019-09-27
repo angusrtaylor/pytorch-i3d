@@ -63,6 +63,7 @@ _C.TRAIN.MAX_EPOCHS = 200
 # Test
 _C.TEST = CN()
 _C.TEST.BATCH_SIZE = 1
+_C.TEST.MODALITY = "both"
 
 def update_config(cfg, options=None, config_file=None):
     cfg.defrost()
