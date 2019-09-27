@@ -90,6 +90,7 @@ def test(test_loader, modality, state_dict_file):
             # compute output
             output = model(input)
             output = torch.mean(output, dim=2)
+            output = F.softmax(output, dim=1)
             predictions_list.append(output)
     
     targets = torch.cat(target_list)
@@ -131,7 +132,7 @@ def run(*options, cfg=None):
                 sample_frames=config.TRAIN.SAMPLE_FRAMES,
                 modality="RGB",
                 train_mode=False,
-                sample_frames_at_test=False,
+                sample_frames_at_test=True,
                 transform=torchvision.transforms.Compose([
                         test_augmentation,
                         Stack(),
@@ -149,13 +150,19 @@ def run(*options, cfg=None):
         if not os.path.exists(rgb_model_file):
             raise FileNotFoundError(rgb_model_file, " does not exist")
 
-        print("scoring with rgb model")
-        targets, rgb_predictions = test(
-            rgb_loader,
-            "RGB",
-            rgb_model_file
-        )
+        iterations = 10
+        epoch_predictions_rgb = []
+        for i in range(iterations):
+            print("scoring with rgb model ", i)
+            targets, rgb_predictions = test(
+                rgb_loader,
+                "RGB",
+                rgb_model_file
+            )
+            epoch_predictions_rgb.append(rgb_predictions)
         
+        rgb_predictions = torch.stack(epoch_predictions_rgb)
+        rgb_predictions = torch.mean(rgb_predictions, dim=0)
         targets = targets.cuda(non_blocking=True)
         rgb_top1_accuracy = accuracy(rgb_predictions, targets, topk=(1, ))
         print("rgb top1 accuracy: ", rgb_top1_accuracy[0].cpu().numpy().tolist())
@@ -169,7 +176,7 @@ def run(*options, cfg=None):
                 sample_frames=config.TRAIN.SAMPLE_FRAMES,
                 modality="flow",
                 train_mode=False,
-                sample_frames_at_test=False,
+                sample_frames_at_test=True,
                 transform=torchvision.transforms.Compose([
                         test_augmentation,
                         Stack(),
@@ -187,12 +194,15 @@ def run(*options, cfg=None):
         if not os.path.exists(flow_model_file):
             raise FileNotFoundError(flow_model_file, " does not exist")
 
-        print("scoring with flow model")
-        targets, flow_predictions = test(
-            flow_loader,
-            "flow",
-            flow_model_file
-        )
+        epoch_predictions_flow = []
+        for i in range(iterations):
+            print("scoring with flow model ", i)
+            targets, flow_predictions = test(
+                flow_loader,
+                "flow",
+                flow_model_file
+            )
+            epoch_predictions_flow.append(flow_predictions)
 
         targets = targets.cuda(non_blocking=True)
         flow_top1_accuracy = accuracy(flow_predictions, targets, topk=(1, ))

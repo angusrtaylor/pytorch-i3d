@@ -40,7 +40,6 @@ _C.DATASET.DIR = "/datadir/rawframes/"
 _C.DATASET.TRAIN = "/home/anta/pytorch-i3d/data/train_rgb.list"
 _C.DATASET.TEST = "/home/anta/pytorch-i3d/data/test_rgb.list"
 _C.DATASET.NUM_CLASSES = 51
-_C.DATASET.FILENAMES = "frame{:04d}.jpg"
 
 # NETWORK
 _C.MODEL = CN()

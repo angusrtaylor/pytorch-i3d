@@ -31,9 +31,10 @@ class VideoRecord(object):
 
 
 class I3DDataSet(data.Dataset):
-    def __init__(self, data_root, split=1, sample_frames=64, modality='RGB',
-                 image_tmpl='frame{:04d}.jpg', transform=lambda x:x,
-                 train_mode=True, test_clips=10):
+    def __init__(self, data_root, split=1, sample_frames=64, 
+            modality='RGB', transform=lambda x:x,
+            train_mode=True, test_clips=10,
+            sample_frames_at_test=False):
 
         self.data_root = data_root
         self.split = split
@@ -41,6 +42,7 @@ class I3DDataSet(data.Dataset):
         self.modality = modality
         self.transform = transform
         self.train_mode = train_mode
+        self.sample_frames_at_test = sample_frames_at_test
         if not self.train_mode:
             self.num_clips = test_clips
 
@@ -134,7 +136,7 @@ class I3DDataSet(data.Dataset):
 
     def __getitem__(self, index):
         record = self.video_list[index]
-        if self.train_mode:
+        if self.train_mode or self.sample_frames_at_test:
             segment_indices = self._sample_indices(record)
         else:
             segment_indices = self._get_test_indices(record)
@@ -167,7 +169,8 @@ if __name__ == '__main__':
         split=1,
         sample_frames = 64,
         modality='RGB',
-        train_mode=True
+        train_mode=False,
+        sample_frames_at_test=False
     )
     item = dat.__getitem__(10)
     print(item[1])
@@ -175,4 +178,5 @@ if __name__ == '__main__':
     print(item[0][0].size)
 
     for x in dat:
+        print(len(x[0]))
         pass
