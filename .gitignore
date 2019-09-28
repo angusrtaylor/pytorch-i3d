@@ -1,4 +1,5 @@
-__pycache__/*
-log/*
-.vscode/*
-checkpoints/*
+__pycache__/
+models/__pycache__/
+log/
+.vscode/
+checkpoints/
