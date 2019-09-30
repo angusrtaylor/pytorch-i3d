@@ -37,15 +37,13 @@ _C.DATASET = CN()
 _C.DATASET.NAME = 'hmdb51'
 _C.DATASET.SPLIT = 1
 _C.DATASET.DIR = "/datadir/rawframes/"
-_C.DATASET.TRAIN = "/home/anta/pytorch-i3d/data/train_rgb.list"
-_C.DATASET.TEST = "/home/anta/pytorch-i3d/data/test_rgb.list"
 _C.DATASET.NUM_CLASSES = 51
 
 # NETWORK
 _C.MODEL = CN()
 _C.MODEL.NAME = "i3d_rgb"
-_C.MODEL.ARCH = ""
-_C.MODEL.PRETRAINED = True
+_C.MODEL.PRETRAINED_RGB = "pretrained_chkpt/rgb_imagenet.pt"
+_C.MODEL.PRETRAINED_FLOW = "pretrained_chkpt/flow_imagenet.pt"
 
 # Train
 _C.TRAIN = CN()
@@ -57,12 +55,14 @@ _C.TRAIN.INPUT_STD = [0.229, 0.224, 0.225]
 _C.TRAIN.SAMPLE_FRAMES = 64
 _C.TRAIN.MODALITY = "RGB"
 _C.TRAIN.BATCH_SIZE = 24
-_C.TRAIN.MAX_EPOCHS = 200
+_C.TRAIN.MAX_EPOCHS = 50
 
 # Test
 _C.TEST = CN()
 _C.TEST.BATCH_SIZE = 1
-_C.TEST.MODALITY = "both"
+_C.TEST.MODALITY = "RGB"
+_C.TEST.MODEL_RGB = "checkpoints/i3d_rgb_split1_epoch009.pt"
+_C.TEST.MODEL_FLOW = "checkpoints/i3d_flow_split1_epoch009.pt"
 
 def update_config(cfg, options=None, config_file=None):
     cfg.defrost()

@@ -1,7 +1,5 @@
 import os
 import time
-import logging
-import logging.config
 import sys
 import numpy as np
 
@@ -10,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-#from torch.optim import lr_scheduler
+from torch.optim import lr_scheduler
 from opt_ranger import Ranger
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
@@ -23,6 +21,8 @@ from videotransforms import (
 )
 from models.pytorch_i3d import InceptionI3d
 
+from metrics import accuracy, AverageMeter
+
 from dataset import I3DDataSet 
 from tensorboardX import SummaryWriter
 
@@ -30,43 +30,8 @@ from default import _C as config
 from default import update_config
 
 # to work with vscode debugger https://github.com/joblib/joblib/issues/864
-# import multiprocessing
-# multiprocessing.set_start_method('spawn', True)
-
-
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-
-
-def accuracy(output, target, topk=(1,)):
-    """Computes the accuracy over the k top predictions for the specified values of k"""
-    with torch.no_grad():
-        maxk = max(topk)
-        batch_size = target.size(0)
-
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-        res = []
-        for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
-        return res
+import multiprocessing
+multiprocessing.set_start_method('spawn', True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch, writer=None):
@@ -88,16 +53,12 @@ def train(train_loader, model, criterion, optimizer, epoch, writer=None):
         target = target.cuda(non_blocking=True)
 
         # compute output
-        # follow classifiation in tensorflow:
-        # tf.reduce_mean(logits, axis=1)
-        # From (batch, class, 7) to (batch, class)
         output = model(input)
         output = torch.mean(output, dim=2)
         loss = criterion(output, target)
 
         # measure accuracy and record loss
         prec1, prec5 = accuracy(output, target, topk=(1,5))
-        #print("Prec1 {}".format(prec1))
         losses.update(loss.item(), input.size(0))
         top1.update(prec1[0], input.size(0))
         top5.update(prec5[0], input.size(0))
@@ -125,6 +86,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer=None):
             writer.add_scalar('train/loss', losses.avg, epoch+1)
             writer.add_scalar('train/top1', top1.avg, epoch+1)
             writer.add_scalar('train/top5', top5.avg, epoch+1)
+
 
 def validate(val_loader, model, criterion, epoch, writer=None):
     batch_time = AverageMeter()
@@ -174,7 +136,6 @@ def validate(val_loader, model, criterion, epoch, writer=None):
             writer.add_scalar('val/top1', top1.avg, epoch+1)
             writer.add_scalar('val/top5', top5.avg, epoch+1)
 
-    #return top1.avg
     return losses.avg
 
 
@@ -192,9 +153,6 @@ def run(*options, cfg=None):
         cfg (str, optional): Location of config file to load. Defaults to None.
     """
     update_config(config, options=options, config_file=cfg)
-    #logging.config.fileConfig(config.LOG_CONFIG)
-    #logger = logging.getLogger(__name__)
-    #logger.debug(config.WORKERS)
 
     torch.backends.cudnn.benchmark = config.CUDNN.BENCHMARK
 
@@ -230,11 +188,6 @@ def run(*options, cfg=None):
         ]
     )
 
-    # normalize = GroupNormalize(
-    #     config.TRAIN.INPUT_MEAN,
-    #     config.TRAIN.INPUT_STD
-    # )
-
     # Setup DataLoaders
     train_loader = torch.utils.data.DataLoader(
         I3DDataSet(
@@ -242,7 +195,6 @@ def run(*options, cfg=None):
             split=config.DATASET.SPLIT,
             sample_frames=config.TRAIN.SAMPLE_FRAMES,
             modality=config.TRAIN.MODALITY,
-            image_tmpl=config.DATASET.FILENAMES,
             transform=torchvision.transforms.Compose([
                        train_augmentation,
                        Stack(),
@@ -262,7 +214,6 @@ def run(*options, cfg=None):
             split=config.DATASET.SPLIT,
             sample_frames=config.TRAIN.SAMPLE_FRAMES,
             modality=config.TRAIN.MODALITY,
-            image_tmpl=config.DATASET.FILENAMES,
             transform=torchvision.transforms.Compose([
                        val_augmentation,
                        Stack(),
@@ -279,15 +230,16 @@ def run(*options, cfg=None):
 
     # Setup Model
     if config.TRAIN.MODALITY == "RGB":
-        i3d_model = InceptionI3d(400, in_channels=3)
-
-        # Extend later to use Non-local-resnet I3D
-
-        # Load pretrained imagenet+kinetics weights
-        i3d_model.load_state_dict(torch.load('pretrained_chkpt/rgb_imagenet.pt'))
+        channels = 3
+        checkpoint = config.MODEL.PRETRAINED_RGB
+    elif config.TRAIN.MODALITY == "flow":
+        channels = 2
+        checkpoint = config.MODEL.PRETRAINED_FLOW
     else:
-        i3d_model = InceptionI3d(400, in_channels=2)
-        i3d_model.load_state_dict(torch.load('pretrained_chkpt/flow_imagenet.pt'))
+        raise ValueError("Modality must be RGB or flow")
+
+    i3d_model = InceptionI3d(400, in_channels=channels)
+    i3d_model.load_state_dict(torch.load(checkpoint))
 
     # Replace final FC layer to match dataset
     i3d_model.replace_logits(config.DATASET.NUM_CLASSES)
@@ -302,35 +254,32 @@ def run(*options, cfg=None):
 
     # Optimiser
     criterion = torch.nn.CrossEntropyLoss().cuda()
-    # Flag fix this once model runs
-    # Paper "SGD, momentum=0.9, 16GPUs, upto 5k steps, 10x reduction on val-loss"
     optimizer = optim.SGD(
        i3d_model.parameters(), 
        lr=1.0,
        momentum=0.9, 
        weight_decay=0.0000001
     )
-    #optimizer = Ranger(i3d_model.parameters())
+    # optimizer = Ranger(i3d_model.parameters())
     # optimizer = optim.Adam(i3d_model.parameters(), lr=0.0001)
 
     #scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [20, 50], gamma=0.1)
-    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-    #     optimizer,
-    #     factor=0.1,
-    #     patience=2,
-    #     verbose=True,
-    #     threshold=1e-4,
-    #     min_lr=1e-4
-    # )
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        factor=0.1,
+        patience=2,
+        verbose=True,
+        threshold=1e-4,
+        min_lr=1e-4
+    )
     
-    #clr = cyclical_lr(step_size, min_lr=0.0001, max_lr=0.1, mode='triangular')
-    #scheduler = optim.lr_scheduler.LambdaLR(optimizer, [clr])
+    # clr = cyclical_lr(step_size, min_lr=0.0001, max_lr=0.1, mode='triangular')
+    # scheduler = optim.lr_scheduler.LambdaLR(optimizer, [clr])
     scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.1, mode='triangular2', step_size_up=25)
 
     if not os.path.exists(config.MODEL_DIR):
         os.makedirs(config.MODEL_DIR)
-    # Train/Val/Logging loop
-    # Abstract away to ignite and tensorboad once sure model is training
+    
     for epoch in range(config.TRAIN.MAX_EPOCHS):
 
         # train for one epoch
@@ -342,12 +291,12 @@ def run(*options, cfg=None):
             writer
         )
 
-        scheduler.step()
+        # scheduler.step()
 
         # evaluate on validation set
         if (epoch + 1) % config.EVAL_FREQ == 0 or epoch == config.TRAIN.MAX_EPOCHS - 1:
             val_loss = validate(val_loader, i3d_model, criterion, epoch, writer)
-            # scheduler.step(val_loss)
+            scheduler.step(val_loss)
             torch.save(
                 i3d_model.module.state_dict(),
                 config.MODEL_DIR+'/'+config.MODEL.NAME+'_split'+str(config.DATASET.SPLIT)+'_epoch'+str(epoch).zfill(3)+'.pt')
