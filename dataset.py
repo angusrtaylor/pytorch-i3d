@@ -71,7 +71,7 @@ class I3DDataSet(data.Dataset):
             except:
                 print("Couldn't load image:{}".format(img_path))
                 return None
-            x_img = np.array(y_img, dtype=np.float32)
+            x_img = np.array(x_img, dtype=np.float32)
             y_img = np.array(y_img, dtype=np.float32)
             img = np.asarray([x_img, y_img]).transpose([1, 2, 0])
             img = Image.fromarray(img.astype('uint8'))
