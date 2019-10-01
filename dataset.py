@@ -48,6 +48,7 @@ class I3DDataSet(data.Dataset):
 
         self._parse_split_files()
 
+
     def _load_image(self, directory, idx):
         if self.modality == 'RGB':
             img_path = os.path.join(directory, 'img_{:05}.jpg'.format(idx))
@@ -76,6 +77,7 @@ class I3DDataSet(data.Dataset):
             img = Image.fromarray(img.astype('uint8'))
             return [img]
 
+
     def _parse_split_files(self):
             file_list = sorted(Path('./data/hmdb51_splits').glob('*'+str(self.split)+'.txt'))
             video_list = []
@@ -102,14 +104,7 @@ class I3DDataSet(data.Dataset):
         :param record: VideoRecord
         :return: list
         """
-        # expanded_sample_length = self.sample_frames * 4  # in order to drop every other frame
-        # if record.num_frames >= expanded_sample_length:
-        #     start_pos = randint(record.num_frames - expanded_sample_length + 1)
-        #     offsets = range(start_pos, start_pos + expanded_sample_length, 4)
-        if record.num_frames > self.sample_frames*2:
-            start_pos = randint(record.num_frames - self.sample_frames*2 + 1)
-            offsets = range(start_pos, start_pos + self.sample_frames*2, 2)
-        elif record.num_frames > self.sample_frames:
+        if record.num_frames > self.sample_frames:
             start_pos = randint(record.num_frames - self.sample_frames + 1)
             offsets = range(start_pos, start_pos + self.sample_frames, 1)
         else:
@@ -121,10 +116,7 @@ class I3DDataSet(data.Dataset):
 
 
     def _get_test_indices(self, record):
-
-        offsets = [v+1 for v in range(0, record.num_frames, 2)]
-        if len(offsets) < self.sample_frames:
-            self._loop_indices(offsets)
+        offsets = [v+1 for v in range(record.num_frames)]
         return offsets
 
 
@@ -158,6 +150,7 @@ class I3DDataSet(data.Dataset):
 
         process_data = self.transform(images)
         return process_data, record.label
+
 
     def __len__(self):
         return len(self.video_list)
