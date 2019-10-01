@@ -256,26 +256,24 @@ def run(*options, cfg=None):
     criterion = torch.nn.CrossEntropyLoss().cuda()
     optimizer = optim.SGD(
        i3d_model.parameters(), 
-       lr=1.0,
+       lr=0.1,
        momentum=0.9, 
        weight_decay=0.0000001
     )
-    # optimizer = Ranger(i3d_model.parameters())
+
     # optimizer = optim.Adam(i3d_model.parameters(), lr=0.0001)
 
     #scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [20, 50], gamma=0.1)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         factor=0.1,
-        patience=2,
+        patience=1,
         verbose=True,
         threshold=1e-4,
         min_lr=1e-4
     )
     
-    # clr = cyclical_lr(step_size, min_lr=0.0001, max_lr=0.1, mode='triangular')
-    # scheduler = optim.lr_scheduler.LambdaLR(optimizer, [clr])
-    scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.1, mode='triangular2', step_size_up=25)
+    # scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.1, mode='triangular2', step_size_up=25)
 
     if not os.path.exists(config.MODEL_DIR):
         os.makedirs(config.MODEL_DIR)
