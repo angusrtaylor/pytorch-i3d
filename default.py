@@ -42,8 +42,8 @@ _C.DATASET.NUM_CLASSES = 51
 # NETWORK
 _C.MODEL = CN()
 _C.MODEL.NAME = "i3d_flow"
-_C.MODEL.PRETRAINED_RGB = "pretrained_chkpt/rgb_imagenet.pt"
-_C.MODEL.PRETRAINED_FLOW = "pretrained_chkpt/flow_imagenet.pt"
+_C.MODEL.PRETRAINED_RGB = "pretrained_chkpt/rgb_imagenet_kinetics.pt"
+_C.MODEL.PRETRAINED_FLOW = "pretrained_chkpt/flow_imagenet_kinetics.pt"
 
 # Train
 _C.TRAIN = CN()
