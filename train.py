@@ -9,7 +9,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim import lr_scheduler
-from opt_ranger import Ranger
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 import torchvision
@@ -199,7 +198,7 @@ def run(*options, cfg=None):
                        train_augmentation,
                        Stack(),
                        ToTorchFormatTensor(),
-                       GroupNormalize(0, 0),
+                       GroupNormalize(),
                    ])
         ),
         batch_size=config.TRAIN.BATCH_SIZE,
@@ -218,7 +217,7 @@ def run(*options, cfg=None):
                        val_augmentation,
                        Stack(),
                        ToTorchFormatTensor(),
-                       GroupNormalize(0, 0),
+                       GroupNormalize(),
                    ]),
             train_mode=False,
         ),
@@ -252,8 +251,9 @@ def run(*options, cfg=None):
     else:
         raise Exception('Get more GPUs')
 
-    # Optimiser
     criterion = torch.nn.CrossEntropyLoss().cuda()
+
+    # Flow model: converges after 25 epochs using batch size 30
     optimizer = optim.SGD(
        i3d_model.parameters(), 
        lr=0.1,
@@ -300,6 +300,7 @@ def run(*options, cfg=None):
                 config.MODEL_DIR+'/'+config.MODEL.NAME+'_split'+str(config.DATASET.SPLIT)+'_epoch'+str(epoch).zfill(3)+'.pt')
 
     writer.close()
+
 
 if __name__ == "__main__":
     fire.Fire(run)

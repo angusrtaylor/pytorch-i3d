@@ -103,7 +103,7 @@ def run(*options, cfg=None):
                         test_augmentation,
                         Stack(),
                         ToTorchFormatTensor(),
-                        GroupNormalize(0, 0),
+                        GroupNormalize(),
                     ])
             ),
             batch_size=config.TEST.BATCH_SIZE,
@@ -141,7 +141,7 @@ def run(*options, cfg=None):
                         test_augmentation,
                         Stack(),
                         ToTorchFormatTensor(),
-                        GroupNormalize(0, 0),
+                        GroupNormalize(),
                     ])
             ),
             batch_size=config.TEST.BATCH_SIZE,
