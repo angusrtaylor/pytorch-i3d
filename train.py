@@ -153,6 +153,8 @@ def run(*options, cfg=None):
     """
     update_config(config, options=options, config_file=cfg)
 
+    print("Training ", config.TRAIN.MODALITY, " model.")
+
     torch.backends.cudnn.benchmark = config.CUDNN.BENCHMARK
 
     torch.manual_seed(config.SEED)

@@ -1,0 +1,6 @@
+MODEL:
+  NAME: "i3d_rgb"
+TRAIN:
+  MODALITY: "RGB"
+  BATCH_SIZE: 24
+  MAX_EPOCHS: 100

@@ -59,8 +59,8 @@ _C.TRAIN.MAX_EPOCHS = 200
 _C.TEST = CN()
 _C.TEST.BATCH_SIZE = 1
 _C.TEST.MODALITY = "both"
-_C.TEST.MODEL_RGB = "checkpoints/i3d_rgb_split1_best.pt"
-_C.TEST.MODEL_FLOW = "checkpoints/i3d_flow_split1_best.pt"
+_C.TEST.MODEL_RGB = "pretrained_chkpt/rgb_hmdb_split1.pt"
+_C.TEST.MODEL_FLOW = "pretrained_chkpt/flow_hmdb_split1.pt"
 
 def update_config(cfg, options=None, config_file=None):
     cfg.defrost()
