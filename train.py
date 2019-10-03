@@ -2,6 +2,7 @@ import os
 import time
 import sys
 import numpy as np
+from apex import amp
 
 import fire
 import torch
@@ -62,16 +63,20 @@ def train(train_loader, model, criterion, optimizer, epoch, writer=None):
         top1.update(prec1[0], input.size(0))
         top5.update(prec5[0], input.size(0))
 
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        loss = loss / config.TRAIN.GRAD_ACCUM_STEPS
+        
+        with amp.scale_loss(loss, optimizer) as scaled_loss:
+            scaled_loss.backward()
+
+        if step % config.TRAIN.GRAD_ACCUM_STEPS == 0:
+            optimizer.step()
+            optimizer.zero_grad()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if step % config.PRINT_FREQ == 0:
+        if step % config.TRAIN.PRINT_FREQ == 0:
             print(('Epoch: [{0}][{1}/{2}], lr: {lr:.5f}\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
@@ -118,7 +123,7 @@ def validate(val_loader, model, criterion, epoch, writer=None):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if step % config.PRINT_FREQ == 0:
+            if step % config.TEST.PRINT_FREQ == 0:
                 print(('Test: [{0}/{1}]\t'
                     'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                     'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
@@ -245,14 +250,6 @@ def run(*options, cfg=None):
     # Replace final FC layer to match dataset
     i3d_model.replace_logits(config.DATASET.NUM_CLASSES)
 
-    # Data-parallel
-    devices_lst = list(range(torch.cuda.device_count()))
-    print("Devices {}".format(devices_lst))
-    if len(devices_lst) > 1:
-        i3d_model = torch.nn.DataParallel(i3d_model).cuda()
-    else:
-        raise Exception('Get more GPUs')
-
     criterion = torch.nn.CrossEntropyLoss().cuda()
 
     # Flow model: converges after 25 epochs using batch size 30
@@ -266,16 +263,29 @@ def run(*options, cfg=None):
     # optimizer = optim.Adam(i3d_model.parameters(), lr=0.0001)
 
     #scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [20, 50], gamma=0.1)
+
+    i3d_model = i3d_model.cuda()
+
+    i3d_model, optimizer = amp.initialize(i3d_model, optimizer, opt_level="O1")
+
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         factor=0.1,
-        patience=1,
+        patience=2,
         verbose=True,
         threshold=1e-4,
         min_lr=1e-4
     )
     
     # scheduler = optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.1, mode='triangular2', step_size_up=25)
+
+    # Data-parallel
+    devices_lst = list(range(torch.cuda.device_count()))
+    print("Devices {}".format(devices_lst))
+    if len(devices_lst) > 1:
+        i3d_model = torch.nn.DataParallel(i3d_model)
+    else:
+        raise Exception('Get more GPUs')
 
     if not os.path.exists(config.MODEL_DIR):
         os.makedirs(config.MODEL_DIR)

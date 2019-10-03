@@ -58,6 +58,9 @@ def test(test_loader, modality, state_dict_file):
             output = model(input)
             output = torch.mean(output, dim=2)
             predictions_list.append(output)
+
+            if step % config.TEST.PRINT_FREQ == 0:
+                print(('Step: [{0}/{1}]'.format(step, len(test_loader))))
     
     targets = torch.cat(target_list)
     predictions = torch.cat(predictions_list)

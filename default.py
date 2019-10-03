@@ -19,7 +19,6 @@ _C.LOG_DIR = "log"
 _C.MODEL_DIR = "checkpoints"
 _C.GPUS = (0,1,2,3)
 _C.WORKERS = 16
-_C.PRINT_FREQ = 50
 _C.EVAL_FREQ = 5
 _C.AUTO_RESUME = False
 _C.PIN_MEMORY = True
@@ -42,21 +41,24 @@ _C.DATASET.NUM_CLASSES = 51
 # NETWORK
 _C.MODEL = CN()
 _C.MODEL.NAME = "i3d_flow"
-_C.MODEL.PRETRAINED_RGB = "pretrained_chkpt/rgb_imagenet_kinetics.pt"
-_C.MODEL.PRETRAINED_FLOW = "pretrained_chkpt/flow_imagenet_kinetics.pt"
+_C.MODEL.PRETRAINED_RGB = "pretrained_models/rgb_imagenet_kinetics.pt"
+_C.MODEL.PRETRAINED_FLOW = "pretrained_models/flow_imagenet_kinetics.pt"
 
 # Train
 _C.TRAIN = CN()
+_C.TRAIN.PRINT_FREQ = 50
 _C.TRAIN.INPUT_SIZE = 224
 _C.TRAIN.RESIZE_RANGE_MIN = 256
 _C.TRAIN.RESIZE_RANGE_MAX = 320
 _C.TRAIN.SAMPLE_FRAMES = 64
 _C.TRAIN.MODALITY = "flow"
 _C.TRAIN.BATCH_SIZE = 30
-_C.TRAIN.MAX_EPOCHS = 200
+_C.TRAIN.GRAD_ACCUM_STEPS = 1
+_C.TRAIN.MAX_EPOCHS = 100
 
 # Test
 _C.TEST = CN()
+_C.TEST.PRINT_FREQ = 250
 _C.TEST.BATCH_SIZE = 1
 _C.TEST.MODALITY = "both"
 _C.TEST.MODEL_RGB = "pretrained_chkpt/rgb_hmdb_split1.pt"

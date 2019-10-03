@@ -19,6 +19,7 @@ dependencies:
   - h5py
   - yacs
   - opencv-python-headless
+  - git+https://github.com/NVIDIA/apex
   
 channels:
 - conda-forge
