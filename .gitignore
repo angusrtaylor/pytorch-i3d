@@ -3,3 +3,4 @@ models/__pycache__/
 log/
 .vscode/
 checkpoints/
+pretrained_models/*
