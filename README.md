@@ -4,6 +4,11 @@ conda env create -f environment.yaml
 conda activate pytorchi3d
 ```
 
+Download pretrained models
+```
+bash download_models.sh
+```
+
 Train RGB model
 ```
 python train.py --cfg config/train_rgb.yaml
