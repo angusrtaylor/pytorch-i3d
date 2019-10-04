@@ -46,7 +46,14 @@ def load_image(frame_file):
         return None
 
 
-def construct_input(frames):
+def load_frames(frames):
+    frame_list = []
+    for frame in frames:
+        frame_list.append(load_image(frame))
+    return frame_list
+
+
+def construct_input(frame_list):
 
     transform = torchvision.transforms.Compose([
                     GroupScale(256),
@@ -56,9 +63,6 @@ def construct_input(frames):
                     GroupNormalize(),
                 ])
 
-    frame_list = []
-    for frame in frames:
-        frame_list.append(load_image(frame))
     process_data = transform(frame_list)
     return process_data.unsqueeze(0)
 
@@ -92,7 +96,8 @@ def predict_over_video(video_frame_list, window_width=9, stride=1):
 
         for i in range(stride+window_width-1, len(video_frame_list), stride):
             window_frame_list = [video_frame_list[j] for j in range(i-window_width, i)]
-            batch = construct_input(window_frame_list)
+            frames = load_frames(window_frame_list)
+            batch = construct_input(frames)
             window_predictions = predict_input(model, batch)
             window_proba = F.softmax(window_predictions, dim=1)
             window_top_pred = window_proba.max(1)

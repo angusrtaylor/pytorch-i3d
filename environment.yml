@@ -5,6 +5,8 @@ dependencies:
 - python=3.6.2
 - pandas
 - numpy
+- ipykernel
+- matplotlib
 - pip:
     # Required packages for AzureML execution, history, and data preparation.
   #- azureml-defaults
@@ -20,6 +22,7 @@ dependencies:
   - yacs
   - opencv-python-headless
   - git+https://github.com/NVIDIA/apex
+  - opencv-contrib-python
   
 channels:
 - conda-forge
